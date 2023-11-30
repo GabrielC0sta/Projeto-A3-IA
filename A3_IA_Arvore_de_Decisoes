@@ -1,0 +1,61 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+from sklearn import tree
+
+#carregar data set
+df = pd.read_csv("data.csv")
+
+# Remove colunas 'id' e 'Unnamed: 32'; transforma 'diagnosis' em valores numéricos
+df = df.drop(['id', 'Unnamed: 32'], axis=1)
+df['diagnosis'] = df['diagnosis'].map({'M': 1, 'B': 0})
+
+# Variáveis preditoras e target
+X = df.drop('diagnosis', axis=1)
+y = df['diagnosis']
+
+# Divisão dos dados em conjuntos de treino e teste
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Definição dos hiperparâmetros a serem testados
+param_grid = {
+    'max_depth': [None, 3, 5, 7, 10],  # Profundidade máxima da árvore
+    'min_samples_split': [2, 5, 10],   # Número mínimo de amostras para dividir um nó
+    'min_samples_leaf': [1, 2, 4]      # Número mínimo de amostras em uma folha
+}
+
+# Modelo DecisionTreeClassifier
+clf = DecisionTreeClassifier(random_state=42)
+
+# Busca em grade para encontrar os melhores hiperparâmetros
+grid_search = GridSearchCV(clf, param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+
+# Melhores hiperparâmetros encontrados
+best_params = grid_search.best_params_
+print("Melhores parâmetros:", best_params)
+
+# Modelo com os melhores hiperparâmetros
+best_clf = grid_search.best_estimator_
+best_clf.fit(X_train, y_train)
+
+# Predições com o modelo otimizado
+y_pred = best_clf.predict(X_test)
+
+# Avaliação do modelo
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Acurácia do modelo: {accuracy:.2f}')
+
+conf_matrix = confusion_matrix(y_test, y_pred)
+print('Matriz de Confusão:')
+print(conf_matrix)
+
+class_report = classification_report(y_test, y_pred)
+print('Relatório de Classificação:')
+print(class_report)
+
+plt.figure(figsize=(15, 10))
+tree.plot_tree(best_clf, feature_names=X.columns, class_names=['Benigno', 'Maligno'], filled=True, rounded=True)
+plt.show()
